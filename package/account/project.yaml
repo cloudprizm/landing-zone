@@ -1,0 +1,54 @@
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xprojects.demo.io
+  labels:
+    demo.io/cloud-provider: gcp
+spec:
+  compositeTypeRef:
+    apiVersion: demo.io/v1alpha1
+    kind: XAccount
+  resources:
+# Example from:
+# "https://marketplace.upbound.io/providers/upbound/provider-gcp-cloudplatform/v1.0.1/resources/cloudplatform.gcp.upbound.io/Project/v1beta1"
+#    - name: project
+#      base:
+#        apiVersion: cloudplatform.gcp.upbound.io/v1beta1
+#        kind: Project
+#        metadata:
+#          annotations:
+#            meta.upbound.io/example-id: cloudplatform/v1beta1/project
+#            upjet.upbound.io/manual-intervention: Requires organization level IAM permissions
+#          labels:
+#            testing.upbound.io/example-name: project
+#          name: project
+#        spec:
+#          forProvider:
+#            name: project
+#            projectId: project
+    - name: customer-provider
+      base:
+        apiVersion: gcp.upbound.io/v1beta1
+        kind: ProviderConfig
+        metadata:
+          name:  # patched
+        spec:
+          credentials:
+            secretRef:
+              key: credentials
+              name: gcp-creator
+              namespace: upbound-system
+            source: Secret
+          projectID:  # patched
+      readinessChecks:
+        - type: None
+      patches:
+        - fromFieldPath: spec.accountID
+          toFieldPath: metadata.name
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: spec.accountID
+          toFieldPath: spec.projectID
+          policy:
+            fromFieldPath: Required

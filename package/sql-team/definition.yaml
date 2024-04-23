@@ -1,0 +1,37 @@
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xsqls.demo.io
+spec:
+  group: demo.io
+  defaultCompositionRef:
+    name: xsubscription.demo.io
+  names:
+    kind: XSql
+    plural: xsqls
+    singular: xsql
+  claimNames:
+    kind: Sql
+    plural: sqls
+    singular: sql
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - rgpName
+                - subscriptionID
+              properties:
+                rgpName:
+                  description: 'Name of resource group in which database will be created'
+                  type: string
+                subscriptionID:
+                  description: 'subscriptionID: Id of the Subscription'
+                  type: string

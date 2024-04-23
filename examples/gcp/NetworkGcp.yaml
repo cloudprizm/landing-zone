@@ -1,0 +1,15 @@
+---
+apiVersion: demo.io/v1alpha1
+kind: Network
+metadata:
+  name: cr-gcp-network
+spec:
+  networkName: jan-m
+  accountID: aerobic-factor-417108
+  cloudRegion: us-west2
+  subnets:
+    - 44.115.90.176/28
+    - 44.115.91.176/28
+  compositionSelector:
+    matchLabels:
+      demo.io/cloud-provider: gcp

@@ -1,0 +1,48 @@
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xaccounts.demo.io
+spec:
+  group: demo.io
+  defaultCompositeDeletePolicy: Foreground
+  defaultCompositionRef:
+    name: xsubscription.demo.io
+  names:
+    kind: XAccount
+    plural: xaccounts
+    singular: xaccount
+  claimNames:
+    kind: Account
+    plural: accounts
+    singular: account
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                accountID:
+                  description: 'Id of subscription/project'
+                  type: string
+                accountType:
+                  description: 'Account Type Possible values: standard, premium, enterprise'
+                  type: string
+                  enum:
+                    - standard
+                    - premium
+                    - enterprise
+            status:
+              type: object
+              properties:
+                accountID:
+                  type: string
+                  description: 'Subscription Id/project Id'
+                accountComposedName:
+                  type: string
+                  description: 'Account composed name'

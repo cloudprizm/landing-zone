@@ -1,0 +1,187 @@
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xgcpnetworks.demo.io
+  labels:
+    demo.io/cloud-provider: gcp
+spec:
+  compositeTypeRef:
+    apiVersion: demo.io/v1alpha1
+    kind: XNetwork
+  patchSets:
+    - name: provider-config
+      patches:
+        - fromFieldPath: spec.accountID
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Required
+    - name: location
+      patches:
+        - fromFieldPath: spec.cloudRegion
+          toFieldPath: spec.forProvider.location
+          policy:
+            fromFieldPath: Required
+  resources:
+    - name: network-naming
+      base:
+        apiVersion: apiextensions.crossplane.io/v1alpha1
+        kind: EnvironmentConfig
+        metadata:
+          name:  # patched
+        data:
+          cloudRegion:  # patched
+      readinessChecks:
+        - type: None
+      patches:
+        - fromFieldPath: spec.cloudRegion
+          toFieldPath: data.cloudRegion
+          transforms:
+            - type: map
+              map:
+                us-west2: uw2
+                us-east1: ue1
+        - type: ToCompositeFieldPath
+          fromFieldPath: data.cloudRegion
+          toFieldPath: metadata.annotations[cloudRegionShort]
+    - name: network
+      base:
+        apiVersion: compute.gcp.upbound.io/v1beta1
+        kind: Network
+        metadata:
+          name:  # patched
+          labels:
+            demo.io/network-selector:  # patched
+          annotations:
+            crossplane.io/external-name:  # patched
+        spec:
+          forProvider:
+            autoCreateSubnetworks: false
+            routingMode: REGIONAL
+          providerConfigRef:
+            name:  # patched
+      patches:
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.networkName
+              - fromFieldPath: metadata.annotations[cloudRegionShort]
+            strategy: string
+            string: # net-vnetn-uswest2
+              fmt: net-%s-%s
+          toFieldPath: metadata.annotations[crossplane.io/external-name]
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: metadata.name
+          toFieldPath: metadata.labels[demo.io/network-selector]  # vnet_name label
+          policy:
+            fromFieldPath: Required
+        - type: PatchSet
+          patchSetName: provider-config
+
+    - name: subnets
+      base:
+        apiVersion: demo.io/v1alpha1
+        kind: XSubnet
+        spec:
+          cidrs:  # patched
+          accountID:  # patched
+          vnetSelector:  # patched
+          compositionSelector:
+            matchLabels:
+              demo.io/cloud-provider: gcp
+      patches:
+        - fromFieldPath: spec.subnets
+          toFieldPath: spec.cidrs
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: spec.cloudRegion
+          toFieldPath: spec.cloudRegion
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: spec.accountID
+          toFieldPath: spec.accountID
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: metadata.name
+          toFieldPath: spec.networkSelector
+          policy:
+            fromFieldPath: Required
+    - name: peering
+      base:
+        apiVersion: tf.upbound.io/v1beta1
+        kind: Workspace
+        metadata:
+          name:  # patched
+        spec:
+          forProvider:
+            vars:
+              - key: peerNetworkRegion
+                value:  # patched
+              - key: projectName
+                value:  # patched
+            source: Inline
+            module: |
+              variable "peerNetworkRegion" {}
+              
+              variable "projectName" {}
+              
+              provider "google" {
+                credentials = "gcp-credentials.json"
+                project     = var.projectName
+              }
+              
+              locals {
+                vpc_name = [for network in data.google_compute_networks.projectNetworks.networks : network if can(regex("shared-${var.peerNetworkRegion}", network))][0]
+              }
+              
+              data "google_compute_networks" "projectNetworks" {
+                project = var.projectName
+              }
+              
+              data "google_compute_network" "sharedNetwork" {
+                name = local.vpc_name
+              }
+              
+              output "peerVpcLink" {
+                value = data.google_compute_network.sharedNetwork.self_link
+              }
+
+          providerConfigRef:
+            name: terraform-gcp
+      patches:
+        - fromFieldPath: metadata.annotations[cloudRegionShort]
+          toFieldPath: spec.forProvider.vars[0].value
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: spec.accountID
+          toFieldPath: spec.forProvider.vars[1].value
+          policy:
+            fromFieldPath: Required
+        - type: ToCompositeFieldPath
+          fromFieldPath: status.atProvider.outputs.peerVpcLink
+          toFieldPath: status.peerVnetId
+    - name: vpc-peering
+      base:
+        apiVersion: compute.gcp.upbound.io/v1beta1
+        kind: NetworkPeering
+        metadata:
+          name:  # patched
+        spec:
+          forProvider:
+            networkSelector:
+              matchLabels:
+                demo.io/network-selector:  # patched
+            peerNetwork:  # patched
+      patches:
+        - fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.networkSelector.matchLabels[demo.io/network-selector]
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: status.peerVnetId
+          toFieldPath: spec.forProvider.peerNetwork
+          policy:
+            fromFieldPath: Required
+        - type: PatchSet
+          patchSetName: provider-config
+

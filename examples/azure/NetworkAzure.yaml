@@ -1,0 +1,17 @@
+---
+apiVersion: demo.io/v1alpha1
+kind: Network
+metadata:
+  name: test-network-az
+spec:
+  networkName: dafanet75
+  # If you don't have EA account you need to create subscription manually
+  accountID: fbdcbf8e-aaa1-4275-b745-f2812fb3d4f5
+  cloudRegion: germanywestcentral
+  # In this example we are creating peering to Vnet with this name
+  # This Vnet can be created in one of the subscriptions To which
+  # used Service Principal has access
+  peerNetworkName: dafn1-gwc1
+  subnets:
+    - 44.115.88.176/28
+    - 44.115.89.176/28

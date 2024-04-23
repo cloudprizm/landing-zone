@@ -1,0 +1,42 @@
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xsqls.demo.io
+  labels:
+    demo.io/cloud-provider: azure
+spec:
+  compositeTypeRef:
+    apiVersion: demo.io/v1alpha1
+    kind: XSql
+  patchSets:
+    - name: provider-config
+      patches:
+        - fromFieldPath: spec.subscriptionID
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Required
+  resources:
+    - name: msql-db
+      base:
+        apiVersion: sql.azure.upbound.io/v1beta1
+        kind: MSSQLServer
+        spec:
+          forProvider:
+            administratorLogin: missadministrator
+            administratorLoginPasswordSecretRef:
+              key: credentials
+              name: msql-secret
+              namespace: crossplane-system
+            location: germanywestcentral
+            resourceGroupNameSelector:
+              matchLabels:
+                demo.io/resource-group-selector:  # patched
+            version: "12.0"
+          providerConfigRef:
+            name:  # patched
+      patches:
+        - fromFieldPath: spec.rgpName
+          toFieldPath: spec.forProvider.resourceGroupNameSelector.matchLabels[demo.io/resource-group-selector]
+        - type: PatchSet
+          patchSetName: provider-config

@@ -1,0 +1,55 @@
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xsubnets.demo.io
+  labels:
+    demo.io/cloud-provider: azure
+spec:
+  compositeTypeRef:
+    apiVersion: demo.io/v1alpha1
+    kind: XSubnet
+  mode: Pipeline
+  pipeline:
+    - step: subnets
+      functionRef:
+        name: crossplane-contrib-function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            ## Variable definition
+            {{- $metadataName := .observed.composite.resource.metadata.name }}
+            {{- $accountID := index .observed.composite.resource.spec.accountID }}
+
+            {{- range $cidr := .observed.composite.resource.spec.cidrs }}
+            {{- $subnetName := printf "%s-%s" $metadataName $cidr | replace "/" "-" }}
+            
+            ---
+            apiVersion: network.azure.upbound.io/v1beta1
+            kind: Subnet
+            metadata:
+              name: {{ $subnetName }}
+              annotations:  
+                gotemplating.fn.crossplane.io/composition-resource-name: {{ $subnetName }}
+            spec:
+              forProvider:
+                addressPrefixes:
+                  - {{ $cidr }}
+                resourceGroupNameSelector:
+                  matchLabels:
+                    demo.io/resource-group-selector: {{ $.observed.composite.resource.spec.resourceGroupSelector }}
+                virtualNetworkNameSelector:
+                  matchLabels:
+                    demo.io/virtualnetwork-selector: {{ $.observed.composite.resource.spec.networkSelector }}
+              providerConfigRef:
+                name: {{ $accountID }}
+            
+            {{- end }}
+
+
+    - step: automatically-detect-ready-composed-resources
+      functionRef:
+        name: crossplane-contrib-function-auto-ready

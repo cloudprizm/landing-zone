@@ -1,0 +1,52 @@
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: CompositeResourceDefinition
+metadata:
+  name: xsubnets.demo.io
+spec:
+  group: demo.io
+  defaultCompositeDeletePolicy: Foreground
+  defaultCompositionRef:
+    name: xsubnets.demo.io
+  names:
+    kind: XSubnet
+    plural: xsubnets
+    singular: xsubnet
+  claimNames:
+    kind: Subnet
+    plural: subnets
+    singular: subnet
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - cidrs
+                - accountID
+                - networkSelector
+              properties:
+                cidrs:
+                  description: 'cidrs: Subnets cidrs'
+                  type: array
+                  items:
+                    type: string
+                cloudRegion:
+                  description: 'cloudRegion: Subnets region'
+                  type: string
+                  enum:
+                    - us-west2
+                accountID:
+                  description: 'subscription Id/project Id for subnets'
+                  type: string
+                resourceGroupSelector:
+                  description: 'resourceGroupSelector: Subnets selector for resource group'
+                  type: string
+                networkSelector:
+                  description: 'networkSelector: Subnets selector for Virtual Network '
+                  type: string

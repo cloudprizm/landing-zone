@@ -1,0 +1,12 @@
+---
+apiVersion: demo.io/v1alpha1
+kind: Sql
+metadata:
+  name: example-msql
+spec:
+  # If you don't have EA account you need to create subscription manually
+  subscriptionID: fbdcbf8e-aaa1-4275-b745-f2812fb3d4f5
+  rgpName: test-network-ftrgk
+  compositionSelector:
+    matchLabels:
+      demo.io/cloud-provider: azure

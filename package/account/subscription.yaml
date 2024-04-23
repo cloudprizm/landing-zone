@@ -1,0 +1,123 @@
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xsubscriptions.demo.io
+  labels:
+    demo.io/cloud-provider: azure
+spec:
+  compositeTypeRef:
+    apiVersion: demo.io/v1alpha1
+    kind: XAccount
+  resources:
+# Example from:
+# "https://marketplace.upbound.io/providers/upbound/provider-azure/v0.42.1/resources/azure.upbound.io/Subscription/v1beta1"
+#    - name: subscription
+#      base:
+#        apiVersion: azure.upbound.io/v1beta1
+#        kind: Subscription
+#        metadata:
+#          annotations:
+#            meta.upbound.io/example-id: azure/v1beta1/subscription
+#            upjet.upbound.io/manual-intervention: This resource needs a valid billing account id.
+#          labels:
+#            testing.upbound.io/example-name: example
+#          name: example
+#        spec:
+#          forProvider:
+#            billingScopeId: null
+#            subscriptionName: My Example EA Subscription
+    - name: customer-provider
+      base:
+        apiVersion: azure.upbound.io/v1beta1
+        kind: ProviderConfig
+        metadata:
+          name:  # patched
+        spec:
+          credentials:
+            source: Secret
+            secretRef:
+              namespace: upbound-system
+              name: azure-creator
+              key: credentials
+          subscriptionID:  # patched
+      readinessChecks:
+        - type: None
+      patches:
+        - fromFieldPath: spec.accountID
+          toFieldPath: metadata.name
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: spec.accountID
+          toFieldPath: spec.subscriptionID
+          policy:
+            fromFieldPath: Required
+    - name: register-provider-network
+      base:
+        apiVersion: azure.upbound.io/v1beta1
+        kind: ResourceProviderRegistration
+        metadata:
+          name:  # patched
+          annotations:
+            crossplane.io/external-name:  # patched
+        spec:
+          forProvider:
+            name: Microsoft.Network
+          providerConfigRef:
+            name:  # patched
+      patches:
+        - fromFieldPath: spec.accountID
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: spec.accountID
+          toFieldPath: metadata.annotations[crossplane.io/external-name]
+          policy:
+            fromFieldPath: Required
+          transforms:
+            - string:
+                fmt: "/subscriptions/%s/providers/Microsoft.Network"
+                type: Format
+              type: string
+    - name: register-provider-sql
+      base:
+        apiVersion: azure.upbound.io/v1beta1
+        kind: ResourceProviderRegistration
+        metadata:
+          name:  # patched
+          annotations:
+            crossplane.io/external-name:  # patched
+        spec:
+          forProvider:
+            name: Microsoft.Sql
+          providerConfigRef:
+            name:  # patched
+      patches:
+        - fromFieldPath: spec.accountID
+          toFieldPath: spec.providerConfigRef.name
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: spec.accountID
+          toFieldPath: metadata.annotations[crossplane.io/external-name]
+          policy:
+            fromFieldPath: Required
+          transforms:
+            - string:
+                fmt: "/subscriptions/%s/providers/Microsoft.Sql"
+                type: Format
+              type: string
+    - name: resource-provider-registration-usage
+      base:
+        apiVersion: apiextensions.crossplane.io/v1alpha1
+        kind: Usage
+        spec:
+          of:
+            apiVersion: azure.upbound.io/v1beta1
+            kind: ProviderConfig
+            resourceSelector:
+              matchControllerRef: true
+          by:
+            apiVersion: azure.upbound.io/v1beta1
+            kind: ResourceProviderRegistration
+            resourceSelector:
+              matchControllerRef: true

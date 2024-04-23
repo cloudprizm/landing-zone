@@ -1,0 +1,79 @@
+---
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xnetworkwatchers.demo.io
+spec:
+  compositeTypeRef:
+    apiVersion: demo.io/v1alpha1
+    kind: XNetworkWatcher
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: crossplane-contrib-function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        patchSets:
+          - name: provider-config
+            patches:
+              - fromFieldPath: spec.subscriptionId
+                policy:
+                  fromFieldPath: Required
+                toFieldPath: spec.providerConfigRef.name
+        resources:
+          - name: network-watcher-resourcegroup
+            base:
+              apiVersion: azure.upbound.io/v1beta1
+              kind: ResourceGroup
+              metadata:
+                annotations:
+                  crossplane.io/external-name: NetworkWatcherRG
+                name:  # patched
+              spec:
+                forProvider:
+                  location: # patched
+                providerConfigRef:
+                  name: # patched
+            patches:
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+                transforms:
+                  - string:
+                      fmt: "%s-network-watcher"
+                      type: Format
+                    type: string
+              - patchSetName: provider-config
+                type: PatchSet
+              - fromFieldPath: spec.location
+                toFieldPath: spec.forProvider.location
+          - name: network-watcher
+            base:
+              apiVersion: network.azure.upbound.io/v1beta1
+              kind: Watcher
+              metadata:
+                annotations:
+                  crossplane.io/external-name:  # patched
+              spec:
+                forProvider:
+                  location:  # patched
+                  resourceGroupNameSelector:
+                    matchControllerRef: true
+                providerConfigRef:
+                  name: # patched
+            patches:
+              - fromFieldPath: spec.location
+                toFieldPath: spec.forProvider.location
+              - fromFieldPath: spec.location
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+                transforms:
+                  - string:
+                      fmt: NetworkWatcher_%s
+                      type: Format
+                    type: string
+              - patchSetName: provider-config
+                type: PatchSet
+    - step: automatically-detect-ready-composed-resources
+      functionRef:
+        name: crossplane-contrib-function-auto-ready

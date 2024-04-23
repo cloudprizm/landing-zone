@@ -1,0 +1,10 @@
+---
+apiVersion: demo.io/v1alpha1
+kind: Account
+metadata:
+  name: test-gcp-account
+spec:
+  accountID: aerobic-factor-417108
+  compositionSelector:
+    matchLabels:
+      demo.io/cloud-provider: gcp

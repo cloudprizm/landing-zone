@@ -1,0 +1,37 @@
+apiVersion: meta.pkg.crossplane.io/v1alpha1
+kind: Configuration
+metadata:
+  name: configuration-landing-zone
+  annotations:
+    meta.crossplane.io/maintainer: The Getting Started Organization jan@cloudprizm.io
+    meta.crossplane.io/source: github.com/cloudprizm/crossplane-examples
+    meta.crossplane.io/license: Apache-2.0
+    meta.crossplane.io/description: |
+      Configuration for initial network landing zone for Azure and GCP.
+    meta.crossplane.io/readme: |
+      This Configuration includes an API that will allow control planes to
+      provision network landing zone for Azure and GCP.
+spec:
+  crossplane:
+    version: ">=v1.14.0"
+  dependsOn:
+    - provider: xpkg.upbound.io/upbound/provider-azure-network
+      version: ">=v0.42.0"
+    - provider: xpkg.upbound.io/upbound/provider-family-azure
+      version: ">=v0.42.0"
+    - provider: xpkg.upbound.io/upbound/provider-azure-sql
+      version: ">=v0.42.1"
+    - function: xpkg.upbound.io/crossplane-contrib/function-go-templating
+      version: ">=v0.3.0"
+    - function: xpkg.upbound.io/crossplane-contrib/function-auto-ready
+      version: ">=v0.2.1"
+    - function: xpkg.upbound.io/crossplane-contrib/function-patch-and-transform
+      version: ">=v0.2.1"
+    - provider: xpkg.upbound.io/upbound/provider-terraform
+      version: ">=v0.10.0"
+    - provider: xpkg.upbound.io/upbound/provider-family-gcp
+      version: ">=v1.0.0"
+    - provider: xpkg.upbound.io/upbound/provider-gcp-sql
+      version: ">=v1.0.0"
+    - provider: xpkg.upbound.io/upbound/provider-gcp-compute
+      version: ">=v1.0.0"
